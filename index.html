@@ -1,0 +1,175 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1072">
+<title>Today</title>
+<style>
+html, body { margin: 0; padding: 0; background: #fff; color: #000; }
+body { width: 1072px; height: 1448px; overflow: hidden; position: relative; font-family: Helvetica, Arial, sans-serif; }
+#head { position: absolute; left: 40px; right: 40px; top: 0; height: 110px; border-bottom: 4px solid #000; }
+#date { position: absolute; left: 0; bottom: 18px; font-size: 44px; font-weight: bold; }
+#clock { position: absolute; right: 0; bottom: 20px; font-size: 36px; }
+#grid { position: absolute; left: 0; right: 0; top: 130px; bottom: 20px; }
+.hour { position: absolute; left: 40px; font-size: 36px; font-weight: bold; color: #000; }
+.line { position: absolute; left: 130px; right: 40px; height: 0; border-top: 2px solid #bbb; }
+.win { position: absolute; left: 136px; right: 40px; background: #e6e6e6; border: 3px solid #000; box-sizing: border-box; overflow: hidden; }
+.win.now { border-width: 9px; }
+.win .name { position: absolute; left: 18px; top: 10px; font-size: 40px; font-weight: bold; white-space: nowrap; }
+.win .until { position: absolute; left: 20px; top: 62px; font-size: 30px; white-space: nowrap; }
+.chip { position: absolute; right: 58px; height: 48px; line-height: 44px; padding: 0 16px; background: #fff; border: 3px solid #000; box-sizing: border-box; font-size: 30px; white-space: nowrap; }
+.chip.event { border-radius: 24px; }
+.chip .box { display: inline-block; width: 24px; height: 24px; border: 3px solid #000; margin-right: 12px; vertical-align: -4px; box-sizing: border-box; }
+.chip.done .box { background: #000; }
+.chip.done { color: #555; }
+.chip .until { font-size: 24px; line-height: 30px; }
+.win .past { position: absolute; left: 0; right: 0; top: 0; background: #b4b4b4; border-bottom: 4px solid #000; }
+#dot { position: absolute; left: 100px; width: 24px; height: 24px; border-radius: 12px; background: #000; }
+body.side .line { right: 430px; }
+body.side .win { right: 430px; }
+body.side .chip { right: 446px; font-size: 26px; padding: 0 12px; }
+body.side .win .name { font-size: 36px; }
+#side { position: absolute; left: 668px; right: 40px; top: 0; bottom: 0; border-left: 3px solid #000; padding-left: 22px; overflow: hidden; }
+#side .head { font-size: 30px; font-weight: bold; margin: 4px 0 18px; }
+#side .item { margin-bottom: 22px; padding-bottom: 20px; border-bottom: 2px solid #bbb; font-size: 30px; line-height: 36px; }
+#side .item.done { color: #555; text-decoration: line-through; }
+#side .item .title { max-height: 72px; overflow: hidden; }
+#side .top { margin: 4px 0 26px; padding-bottom: 24px; border-bottom: 3px solid #000; }
+#side .top .label { font-size: 30px; font-weight: bold; }
+#side .top .what { font-size: 38px; line-height: 46px; font-weight: bold; margin-top: 12px; max-height: 250px; overflow: hidden; overflow-wrap: break-word; }
+#side .top.done .what { text-decoration: line-through; color: #555; }
+</style>
+</head>
+<body>
+<div id="head"><div id="date"></div><div id="clock"></div></div>
+<div id="grid"></div>
+<script src="data.js"></script>
+<script>
+(function () {
+  var SPAN = 360;
+  var BACK = 60;
+  var CHIP = 48;
+  var GAP = 6;
+
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+  function hm(m) { return pad(Math.floor(m / 60)) + ":" + pad(m % 60); }
+
+  var q = /[?&]now=(\d+):(\d+)/.exec(location.search);
+  var d = new Date();
+  var now = q ? parseInt(q[1], 10) * 60 + parseInt(q[2], 10) : window.DAY ? window.DAY.now : d.getHours() * 60 + d.getMinutes();
+
+  var start = Math.floor((now - BACK) / 30) * 30;
+  if (start < 0) start = 0;
+  if (start > 1440 - SPAN) start = 1440 - SPAN;
+  var end = start + SPAN;
+
+  var grid = document.getElementById("grid");
+  if (!window.DAY) {
+    document.getElementById("date").innerHTML = "No data";
+    document.getElementById("clock").innerHTML = "updated " + hm(now);
+    grid.innerHTML = '<div style="padding:60px 40px;font-size:40px">' + (window.DAY_ERROR || "Superfocus did not answer.") + "</div>";
+    return;
+  }
+  var H = grid.offsetHeight;
+  function y(m) { return Math.round((m - start) / SPAN * H); }
+
+  function add(cls, top, height, html) {
+    var el = document.createElement("div");
+    el.className = cls;
+    el.style.top = top + "px";
+    if (height !== null) el.style.height = height + "px";
+    if (html) el.innerHTML = html;
+    grid.appendChild(el);
+    return el;
+  }
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  document.getElementById("date").innerHTML = esc(window.DAY.date);
+  document.getElementById("clock").innerHTML = "updated " + hm(now);
+
+  var m;
+  for (m = Math.ceil(start / 60) * 60; m < end; m += 60) {
+    add("line", y(m), null, "");
+    if (y(m) >= 22) add("hour", y(m) - 22, null, pad(m / 60));
+  }
+
+  var wins = [];
+  var blocks = window.DAY.blocks.slice().sort(function (a, b) { return a.s - b.s; });
+  var i, b;
+
+  for (i = 0; i < blocks.length; i++) {
+    b = blocks[i];
+    if (b.t !== "protected" || b.e <= start || b.s >= end) continue;
+    var top = y(Math.max(b.s, start));
+    var bottom = y(Math.min(b.e, end));
+    var current = now >= b.s && now < b.e;
+    var html = '<div class="name">' + esc(b.title) + "</div>";
+    if (current) html += '<div class="until">until ' + hm(b.e) + "</div>";
+    var done = Math.max(0, y(now) - top - 2 - 9);
+    if (current) html = '<div class="past" style="height:' + done + "px" + (done < 110 ? ";border-bottom:0" : "") + '"></div>' + html;
+    wins.push({ el: add("win" + (current ? " now" : ""), top + 2, bottom - top - 4, html), top: top + 2 });
+  }
+
+  var planned = window.DAY.planned || [];
+  var top = window.DAY.top;
+  if (top) planned = planned.filter(function (t) { return t.title !== top.title; });
+  var hasSide = planned.length > 0 || !!top;
+  if (hasSide) document.body.className = "side";
+
+  var items = [];
+  for (i = 0; i < blocks.length; i++) {
+    b = blocks[i];
+    if (b.t !== "protected" && b.e > start && b.s < end) items.push(b);
+  }
+  var lane = (1072 - 136 - (hasSide ? 430 : 40)) / 2;
+  var lastBottom = -1000;
+  i = 0;
+  while (i < items.length) {
+    var j = i + 1;
+    var clusterEnd = items[i].e;
+    while (j < items.length && items[j].s < clusterEnd) {
+      if (items[j].e > clusterEnd) clusterEnd = items[j].e;
+      j++;
+    }
+    var n = j - i;
+    var cy = y(Math.max(items[i].s, start)) + 4;
+    if (cy < lastBottom + GAP) cy = lastBottom + GAP;
+    var each = Math.floor((y(Math.min(clusterEnd, end)) - 4 - cy - GAP * (n - 1)) / n);
+    if (each < CHIP) each = CHIP;
+    for (; i < j; i++) {
+      b = items[i];
+      if (cy + CHIP > H) continue;
+      var h = Math.min(each, H - cy);
+      var cls = "chip " + b.t + (b.done ? " done" : "");
+      var inner = (b.t === "task" ? '<span class="box"></span>' : "") + esc(b.title);
+      if (h >= 96) inner += '<div class="until">until ' + hm(b.e) + "</div>";
+      var el = add(cls, cy, h, inner);
+      el.style.minWidth = lane + "px";
+      for (var w = 0; w < wins.length; w++) {
+        if (cy >= wins[w].top + 60 || cy + h <= wins[w].top) continue;
+        var name = wins[w].el.firstChild.className === "past" ? wins[w].el.childNodes[1] : wins[w].el.firstChild;
+        var room = wins[w].el.offsetWidth - el.offsetWidth - 50;
+        if (name.offsetWidth > room) name.style.fontSize = Math.floor(parseInt(getComputedStyle(name).fontSize, 10) * room / name.offsetWidth) + "px";
+      }
+      lastBottom = cy + h;
+      cy = lastBottom + GAP;
+    }
+  }
+
+  if (hasSide) {
+    var side = "";
+    if (top) side += '<div class="top' + (top.done ? " done" : "") + '"><div class="label">Top thing</div><div class="what">' + esc(top.title) + "</div></div>";
+    if (planned.length) side += '<div class="head">Planned today</div>';
+    for (i = 0; i < planned.length; i++) {
+      var t = planned[i];
+      side += '<div class="item' + (t.done ? " done" : "") + '"><div class="title">' + esc(t.title) + "</div></div>";
+    }
+    add("", 0, null, side).id = "side";
+  }
+
+  var dot = add("", y(now) - 12, null, "");
+  dot.id = "dot";
+})();
+</script>
+</body>
+</html>

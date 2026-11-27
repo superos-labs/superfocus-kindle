@@ -1,0 +1,11 @@
+{
+  "name": "superfocus-kindle",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Show today's Superfocus schedule on a Kindle",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node --env-file=.env server.js",
+    "sample": "node server.js --sample"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "date": "Tuesday, Mar 3",
+  "now": 615,
+  "blocks": [
+    { "t": "protected", "title": "Morning routine", "s": 480, "e": 540, "done": false },
+    { "t": "protected", "title": "Deep work", "s": 540, "e": 720, "done": false },
+    { "t": "task", "title": "Write the launch post", "s": 570, "e": 660, "done": false },
+    { "t": "protected", "title": "Lunch", "s": 720, "e": 780, "done": false },
+    { "t": "event", "title": "Team sync", "s": 780, "e": 810, "done": false },
+    { "t": "protected", "title": "Light work", "s": 810, "e": 930, "done": false },
+    { "t": "task", "title": "Inbox to zero", "s": 840, "e": 870, "done": false }
+  ],
+  "planned": [
+    { "title": "Reply to the accountant", "done": false },
+    { "title": "Book the dentist", "done": false },
+    { "title": "Plan next week", "done": false },
+    { "title": "Order groceries", "done": true }
+  ],
+  "top": { "title": "Write the launch post", "done": false }
+}
